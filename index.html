@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phoenix Point Multiclass &amp; Perk Browser</title>
+<meta name="description" content="Pick any two of Phoenix Point's 7 soldier classes and see both classes' full weapon proficiencies and perk lists side by side — a structured browser, not a tier list.">
+<style>
+  :root {
+    --bg: #11151c;
+    --panel: #1a2029;
+    --panel-border: #313c4d;
+    --ink: #e4e8ee;
+    --ink-dim: #9aa6b5;
+    --accent: #4f8fae;
+    --accent-bright: #7bc3e8;
+    --field-bg: #0c0f14;
+    --warn: #c2874f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 16px;
+  }
+  .sub {
+    color: var(--ink-dim);
+    font-size: 0.93rem;
+    margin: 0 0 28px;
+  }
+  .sub a { color: var(--accent-bright); }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  section h2 {
+    font-size: 1.1rem;
+    margin: 0 0 6px;
+  }
+  .section-note {
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+    margin: 0 0 16px;
+  }
+  .picker-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+  label.field-label {
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+  }
+  select {
+    width: 100%;
+    background: var(--field-bg);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 9px 10px;
+    font-size: 1rem;
+  }
+  select:focus { outline: 1px solid var(--accent); }
+  .same-class-warning {
+    color: var(--warn);
+    font-size: 0.85rem;
+    margin: 8px 0 0;
+    display: none;
+  }
+  .same-class-warning.show { display: block; }
+  .exclusion-note {
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    background: var(--field-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 12px 14px;
+    margin: 0 0 20px;
+  }
+  .pair-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 18px;
+  }
+  .class-panel {
+    background: var(--field-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 16px 18px;
+  }
+  .class-panel h3 {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+    color: var(--accent-bright);
+  }
+  .class-panel .proficiency {
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    margin: 0 0 14px;
+  }
+  table.perk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  table.perk-table th, table.perk-table td {
+    border: 1px solid var(--panel-border);
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.perk-table th {
+    color: var(--ink-dim);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  table.perk-table td.level { white-space: nowrap; color: var(--accent-bright); font-weight: 600; }
+  table.perk-table td.name { white-space: nowrap; font-weight: 600; }
+  table.perk-table .inferred-flag, table.perk-table .typo-flag {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--warn);
+    margin-top: 3px;
+  }
+  .community-note {
+    margin-top: 18px;
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    background: var(--field-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .community-note strong { color: var(--ink); }
+  .sources-section {
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+  }
+  .sources-section h2 { font-size: 1.05rem; }
+  .sources-section ul { margin: 6px 0 16px; padding-left: 22px; }
+  .sources-section li { margin-bottom: 8px; }
+  .sources-section a { color: var(--accent-bright); }
+  .self-test { font-size: 0.75rem; color: var(--ink-dim); margin-top: 10px; }
+  .self-test.ok { color: var(--accent-bright); }
+  .self-test.bad { color: var(--warn); }
+  footer {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+    font-size: 0.8rem;
+    color: var(--ink-dim);
+  }
+  footer a { color: var(--accent-bright); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Phoenix Point Multiclass &amp; Perk Browser</h1>
+  <p class="sub">Pick any two of
+  <a href="https://store.steampowered.com/app/839770" target="_blank" rel="noopener">Phoenix Point</a>'s
+  7 soldier classes and see both classes' full weapon proficiency and perk lists side by side. This
+  page shows what each class pair unlocks. It does not rank class pairs, and nothing here is
+  saved or sent anywhere — it renders from the data in this page in your browser.</p>
+
+  <section>
+    <h2>Pick a pair</h2>
+    <p class="section-note">At Level 4, a soldier can acquire a second class. That immediately
+    unlocks the second class's weapon proficiency; its abilities unlock as you spend skill points,
+    same as the primary class.</p>
+    <div class="picker-row">
+      <div class="field">
+        <label class="field-label" for="classA">First class</label>
+        <select id="classA"></select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="classB">Second class</label>
+        <select id="classB"></select>
+      </div>
+    </div>
+    <p class="same-class-warning" id="sameClassWarning">Pick two different classes to compare them.</p>
+  </section>
+
+  <div class="exclusion-note" id="exclusionNote"></div>
+
+  <section>
+    <h2 id="pairHeading">Comparison</h2>
+    <div class="pair-columns" id="pairColumns"></div>
+    <div class="community-note" id="communityNote" style="display:none;"></div>
+  </section>
+
+  <section class="sources-section">
+    <h2>Sources &amp; last verified date</h2>
+    <p class="verified">All pages and threads below fetched and re-read directly 2026-10-20.</p>
+    <ul>
+      <li><a href="https://phoenixpoint.wiki.fextralife.com/Classes" target="_blank" rel="noopener">phoenixpoint.wiki.fextralife.com/Classes</a>
+      — weapon proficiency per class and the Level-4 "acquire an additional class" mechanic
+      (weapon proficiency unlocks immediately; abilities unlock with skill points). Page last
+      edited April 2020 per its own history.</li>
+      <li>Each class's own fextralife page (Assault, Heavy, Sniper, Technician, Berserker, Priest)
+      plus the separate "Infiltrator Skills" subpage — full perk name/level/SP-cost/effect text
+      per class. These are this page's only source for perk text; no independent second source
+      was found that lists the same perks to cross-check wording against, so every perk above is
+      single-sourced. A second mirror (Fandom; out of scope for crawling under this lane's
+      charter) was found via search to describe a different Assault skill tree, which reads as a
+      different-patch snapshot rather than a correction — see the note in <code>data.js</code>.</li>
+      <li><a href="https://steamcommunity.com/app/839770/discussions/0/592895726921501425/" target="_blank" rel="noopener">steamcommunity.com — the "third-row perks" exclusion claim</a>
+      — one poster says secondary-class Level 5-7 perks don't carry over; a second poster in the
+      same thread says they do. Single-threaded and internally disputed, so not shipped as a rule
+      here. See the in-page note above the comparison.</li>
+      <li>Community-note sourcing (Heavy/Sniper, Berserker/Heavy pairings): multiple independent
+      Steam Community discussion threads reporting similar playstyle patterns for those two pairs
+      specifically — <a href="https://steamcommunity.com/app/839770/discussions/0/592895726921501425/" target="_blank" rel="noopener">thread 1</a>,
+      <a href="https://steamcommunity.com/app/839770/discussions/0/5913830210154832030" target="_blank" rel="noopener">thread 2</a>,
+      <a href="https://steamcommunity.com/app/839770/discussions/0/5479214724380918904" target="_blank" rel="noopener">thread 3</a>.
+      No other pair had corroborating reports across independent threads, so no other pair gets a
+      community note.</li>
+    </ul>
+    <p class="self-test" id="selfTest">running self-test…</p>
+  </section>
+</main>
+
+<footer>
+  Fan-made reference tool, unaffiliated with Snapshot Games. Figures above reflect the sources
+  cited, fetched 2026-10-20, and may not match every patch — verify against your own in-run skill
+  screen before relying on a number. No account, no server, no data leaves your browser.
+</footer>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  "use strict";
+  var D = window.PPDATA;
+
+  function populateSelect(select, selectedName) {
+    select.innerHTML = "";
+    D.CLASSES.forEach(function (cls) {
+      var opt = document.createElement("option");
+      opt.value = cls.name;
+      opt.textContent = cls.name;
+      if (cls.name === selectedName) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  function perkTable(cls) {
+    var table = document.createElement("table");
+    table.className = "perk-table";
+    var thead = document.createElement("thead");
+    thead.innerHTML = "<tr><th>Level</th><th>SP cost</th><th>Perk</th><th>Effect</th></tr>";
+    table.appendChild(thead);
+    var tbody = document.createElement("tbody");
+    cls.perks.forEach(function (perk) {
+      var tr = document.createElement("tr");
+
+      var levelTd = document.createElement("td");
+      levelTd.className = "level";
+      levelTd.textContent = String(perk.level);
+      if (perk.levelInferred) {
+        var lf = document.createElement("span");
+        lf.className = "inferred-flag";
+        lf.textContent = "position-inferred, not stated by source";
+        levelTd.appendChild(lf);
+      }
+      tr.appendChild(levelTd);
+
+      var spTd = document.createElement("td");
+      spTd.textContent = (perk.spCost === null || perk.spCost === undefined)
+        ? "not listed in source"
+        : String(perk.spCost);
+      tr.appendChild(spTd);
+
+      var nameTd = document.createElement("td");
+      nameTd.className = "name";
+      nameTd.textContent = perk.name;
+      tr.appendChild(nameTd);
+
+      var effectTd = document.createElement("td");
+      effectTd.textContent = perk.effect;
+      if (perk.sourceTypo) {
+        var tf = document.createElement("span");
+        tf.className = "typo-flag";
+        tf.textContent = perk.sourceTypo;
+        effectTd.appendChild(tf);
+      }
+      tr.appendChild(effectTd);
+
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    return table;
+  }
+
+  function classPanel(cls) {
+    var panel = document.createElement("div");
+    panel.className = "class-panel";
+    var h3 = document.createElement("h3");
+    h3.textContent = cls.name;
+    panel.appendChild(h3);
+    var prof = document.createElement("p");
+    prof.className = "proficiency";
+    prof.textContent = "Proficient with: " + cls.weaponProficiency;
+    panel.appendChild(prof);
+    panel.appendChild(perkTable(cls));
+    return panel;
+  }
+
+  function render() {
+    var nameA = document.getElementById("classA").value;
+    var nameB = document.getElementById("classB").value;
+    var warning = document.getElementById("sameClassWarning");
+    var columns = document.getElementById("pairColumns");
+    var heading = document.getElementById("pairHeading");
+    var noteBox = document.getElementById("communityNote");
+
+    columns.innerHTML = "";
+
+    if (nameA === nameB) {
+      warning.classList.add("show");
+      heading.textContent = "Comparison";
+      noteBox.style.display = "none";
+      return;
+    }
+    warning.classList.remove("show");
+
+    var classA = D.getClass(nameA);
+    var classB = D.getClass(nameB);
+    heading.textContent = nameA + " + " + nameB;
+    columns.appendChild(classPanel(classA));
+    columns.appendChild(classPanel(classB));
+
+    var note = D.getCommunityNote(nameA, nameB);
+    if (note) {
+      noteBox.style.display = "block";
+      noteBox.innerHTML = "<strong>Community notes:</strong> ";
+      noteBox.appendChild(document.createTextNode(note));
+    } else {
+      noteBox.style.display = "none";
+      noteBox.innerHTML = "";
+    }
+  }
+
+  var selA = document.getElementById("classA");
+  var selB = document.getElementById("classB");
+  populateSelect(selA, "Heavy");
+  populateSelect(selB, "Sniper");
+  selA.addEventListener("change", render);
+  selB.addEventListener("change", render);
+
+  document.getElementById("exclusionNote").textContent = D.EXCLUSION_NOTE;
+
+  render();
+
+  // Structural self-test mirroring test.js, so opening the file directly also proves the data
+  // shape without a terminal.
+  (function selfTest() {
+    var el = document.getElementById("selfTest");
+    var pass = 0, total = 4;
+    if (D.CLASSES.length === 7) pass++;
+    if (D.CLASSES.every(function (c) { return c.perks.length === 7; })) pass++;
+    if (D.CLASSES.every(function (c) { return c.perks.some(function (p) { return p.name === "New Class" && p.level === 4; }); })) pass++;
+    var bannedWords = ["best", "optimal", "strongest", "guaranteed", "approved", "certified", "compliant", "safe", "recommended"];
+    // Only the rendered, user-visible copy counts — not this checker's own word list, which lives
+    // in a <script> tag that is a sibling of <main>/<footer>, not a descendant of either.
+    var visibleText = (document.querySelector("main").textContent + " " + document.querySelector("footer").textContent).toLowerCase();
+    if (bannedWords.every(function (w) { return visibleText.indexOf(w) === -1; })) pass++;
+    el.textContent = "self-test: " + pass + "/" + total + " known-answer scenarios passed";
+    el.className = "self-test " + (pass === total ? "ok" : "bad");
+  })();
+})();
+</script>
+</body>
+</html>
